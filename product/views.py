@@ -1,4 +1,7 @@
+from itertools import count
+
 import requests
+from django.db.models import Prefetch, Count
 from django.http import HttpResponse
 from django.shortcuts import render
 from requests import Response
@@ -8,16 +11,29 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from app.models import Product, Comment, ImageModel, WishModel, User
-from app.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer, \
-    WishSerializer
+from product import models
+from product.models import Product, Comment, Image, User
+from product.pagination import StandardResultsSetPagination
+
+from product.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer
 
 
 # Create your views here.
 
+
 class ProductListApiView(ListAPIView):
-    queryset = Product.objects.all()
+    queryset = Product.objects.all().prefetch_related('liked') \
+                   .prefetch_related(
+        Prefetch('images', queryset=Image.objects.all().select_related('product'))).annotate(
+        comment_count=Count('comments'))
+
+    # queryset = Product.objects.all()[:50]
     serializer_class = ProductSerializers
+    pagination_class = StandardResultsSetPagination
+
+    # def get_queryset(self):
+    #     return Product.objects.all().prefetch_related('liked')[:12]
+
     # permission_classes = [IsAuthenticated, ]
 
 
@@ -68,28 +84,10 @@ class CommentListApiView(ListAPIView):
 #     lookup_url_kwarg = 'pk'
 #
 #
-# class ImageModelViewSet(ModelViewSet):
-#     queryset = ImageModel.objects.all()
-#     serializer_class = ImageSerializer
-#     lookup_url_kwarg = 'pk'
+class ImageModelViewSet(ModelViewSet):
+    # queryset = Image.objects.all()
+    serializer_class = ImageSerializer
+    lookup_url_kwarg = 'pk'
 
-
-class WishListApiView(RetrieveAPIView):
-    # permission_classes = [IsAuthenticated, ]
-    queryset = WishModel.objects.all()
-    serializer_class = WishSerializer
-
-
-class ListUsers(APIView):
-    """
-    View to list all users in the system.
-
-    * Requires token authentication.
-    * Only admin users are able to access this view.
-    """
-    authentication_classes = [authentication.TokenAuthentication]
-
-    # permission_classes = [permissions.IsAdminUser]
-
-    
-
+    def get_queryset(self):
+        return Image.objects.all().select_related('product_id')

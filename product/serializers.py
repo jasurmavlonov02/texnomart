@@ -1,8 +1,28 @@
+from django.db.models import Count
 from rest_framework.fields import CharField
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, ImageField, ListField, \
-    PrimaryKeyRelatedField
+    PrimaryKeyRelatedField, IntegerField
 from django.contrib.sites.shortcuts import get_current_site
-from app.models import Product, Comment, ImageModel, WishModel, User
+from product.models import Product, Comment, Image, User
+
+
+class DynamicModelSerializer(ModelSerializer):
+    def get_field_names(self, declared_fields, info):
+        field_names = super(DynamicModelSerializer, self).get_field_names(declared_fields, info)
+        if self.dynamic_fields is not None:
+            # Drop any fields that are not specified in the `fields` argument.
+            allowed = set(self.dynamic_fields)
+            excluded_field_names = set(field_names) - allowed
+            field_names = tuple(x for x in field_names if x not in excluded_field_names)
+        return field_names
+
+    def __init__(self, *args, **kwargs):
+        # Don't pass the `fields` or `read_only_fields` arg up to the superclass
+        self.dynamic_fields = kwargs.pop('fields', None)
+        self.read_only_fields = kwargs.pop('read_only_fields', [])
+
+        # Instantiate the superclass normally
+        super(DynamicModelSerializer, self).__init__(*args, **kwargs)
 
 
 class UserSerializers(ModelSerializer):
@@ -21,7 +41,7 @@ class CommentSerializers(ModelSerializer):
 
 class ImageSerializer(ModelSerializer):
     class Meta:
-        model = ImageModel
+        model = Image
         fields = ('id', 'product', 'image')
 
     # def get_photo_url(self, obj):
@@ -30,7 +50,8 @@ class ImageSerializer(ModelSerializer):
     #     return request.build_absolute_uri(photo_url)
 
 
-class ProductSerializers(ModelSerializer):
+class ProductSerializers(DynamicModelSerializer):
+    comment_count = IntegerField()
     # images = ImageSerializer(many=True, read_only=True)
     # #
     # uploaded_images = ListField(
@@ -40,7 +61,7 @@ class ProductSerializers(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'price', 'description', 'brand', 'latest_image', 'liked', 'is_liked')
+        fields = ('id', 'name', 'price', 'description', 'brand', 'is_liked', 'latest_image','comment_count')
 
     # def create(self, validated_data):
     #     uploaded_images = validated_data.pop("uploaded_images")
@@ -54,9 +75,16 @@ class ProductSerializers(ModelSerializer):
     latest_image = SerializerMethodField()
     is_liked = SerializerMethodField()
 
+    #
     def get_latest_image(self, obj):
-        latest_image = ImageModel.objects.filter(product=obj).latest('id')
+
+        latest_image = obj.images.all()
+
+        if len(latest_image) == 0 or not latest_image:
+            return None
+        latest_image = latest_image[0]
         latest_image_serializer = ImageSerializer(latest_image)
+
         request = self.context.get('request')
         photo_url = latest_image.image.url
         return request.build_absolute_uri(photo_url)
@@ -66,19 +94,19 @@ class ProductSerializers(ModelSerializer):
 
         liked = instance.liked.all()
 
-        print('---------')
-        print(liked)
-        print('---------')
         if user in liked:
             return True
         return False
 
+    # def get_rating_count(self, obj):
+    #     rating_count = Comment.objects.filter(product=obj)
+    #     return rating_count
 
 # return latest_image_serializer.data.get('image')
 # return 'http://127.0.0.1:8000'+latest_image_serializer.data.get('image')
 
 
-class WishSerializer(ModelSerializer):
-    class Meta:
-        model = WishModel
-        exclude = ()
+# class WishSerializer(ModelSerializer):
+#     class Meta:
+#         model = WishModel
+#         exclude = ()

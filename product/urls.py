@@ -1,9 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 #
-# from app.views import CommentListApiView, PersonListApiView, ProductModelViewSet, ProfileModelViewSet, \
+# from product.views import CommentListApiView, PersonListApiView, ProductModelViewSet, ProfileModelViewSet, \
 #     CommentModelViewSet, ProductDeleteApiView, ImageModelViewSet
-from app.views import ProductListApiView, WishListApiView, UserListApiView, ListUsers
+from product.views import ProductListApiView, UserListApiView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -23,11 +23,9 @@ urlpatterns = [
 
     path('product-list/', ProductListApiView.as_view(), name='product_list'),
     path('profile-list/', UserListApiView.as_view(), name='profile_list'),
-    path('wish-list/', WishListApiView.as_view(), name='wish_list'),
 
     # path('comment-list/', CommentListApiView.as_view(), name='product_add'),
     # path('person-list/', PersonListApiView.as_view(), name='product_update'),
     # path('product-delete/<int:pk>', ProductDeleteApiView.as_view(), name='product_delete'),
     # path('', include(router.urls)),
-    path('user-list/', ListUsers.as_view(), name='user_list'),
 ]
