@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import integer_validator
 from django.db import models
-from django.db import models
+from django.db.models import CASCADE
 
 from product.managers import UserManager
 
@@ -13,7 +12,7 @@ class Product(models.Model):
     name = models.CharField(max_length=150)
     price = models.FloatField()
     description = models.CharField(max_length=255)
-    brand = models.CharField(max_length=100)
+    brand = models.ForeignKey('Brand', on_delete=CASCADE)
     liked = models.ManyToManyField('User', related_name='liked')
 
     def __str__(self):
@@ -58,3 +57,10 @@ class Image(models.Model):
 
     class Meta:
         ordering = ['order', ]
+
+
+class Brand(models.Model):
+    title = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.title

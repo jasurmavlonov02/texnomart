@@ -1,8 +1,7 @@
-from django.db.models import Count
 from rest_framework.fields import CharField
-from rest_framework.serializers import ModelSerializer, SerializerMethodField, ImageField, ListField, \
-    PrimaryKeyRelatedField, IntegerField
-from django.contrib.sites.shortcuts import get_current_site
+from rest_framework.fields import CharField
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, IntegerField
+
 from product.models import Product, Comment, Image, User
 
 
@@ -52,6 +51,8 @@ class ImageSerializer(ModelSerializer):
 
 class ProductSerializers(DynamicModelSerializer):
     comment_count = IntegerField()
+    avg_rating = IntegerField()
+
     # images = ImageSerializer(many=True, read_only=True)
     # #
     # uploaded_images = ListField(
@@ -61,7 +62,9 @@ class ProductSerializers(DynamicModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'price', 'description', 'brand', 'is_liked', 'latest_image','comment_count')
+        fields = (
+            'id', 'name', 'price', 'description', 'brand', 'is_liked', 'latest_image', 'comment_count',
+            'avg_rating')
 
     # def create(self, validated_data):
     #     uploaded_images = validated_data.pop("uploaded_images")
@@ -82,6 +85,7 @@ class ProductSerializers(DynamicModelSerializer):
 
         if len(latest_image) == 0 or not latest_image:
             return None
+
         latest_image = latest_image[0]
         latest_image_serializer = ImageSerializer(latest_image)
 

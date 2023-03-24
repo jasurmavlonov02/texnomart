@@ -8,6 +8,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from django.views.decorators.cache import cache_page
 
 # #
 # router = DefaultRouter()
@@ -20,8 +21,7 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
-
-    path('product-list/', ProductListApiView.as_view(), name='product_list'),
+    path('product-list/', cache_page(60)(ProductListApiView.as_view()), name='product_list'),
     path('profile-list/', UserListApiView.as_view(), name='profile_list'),
 
     # path('comment-list/', CommentListApiView.as_view(), name='product_add'),

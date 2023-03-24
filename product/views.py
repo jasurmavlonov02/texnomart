@@ -1,20 +1,10 @@
-from itertools import count
-
-import requests
-from django.db.models import Prefetch, Count
-from django.http import HttpResponse
-from django.shortcuts import render
-from requests import Response
-from rest_framework import status, authentication, permissions
-from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView, RetrieveAPIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
+from django.db.models import Prefetch, Count, Avg
+from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ModelViewSet
 
-from product import models
-from product.models import Product, Comment, Image, User
+from product.models import Comment, Image, User
 from product.pagination import StandardResultsSetPagination
-
+from product.round import Round
 from product.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer
 
 
@@ -23,9 +13,9 @@ from product.serializers import ProductSerializers, UserSerializers, CommentSeri
 
 class ProductListApiView(ListAPIView):
     queryset = Product.objects.all().prefetch_related('liked') \
-                   .prefetch_related(
+        .prefetch_related(
         Prefetch('images', queryset=Image.objects.all().select_related('product'))).annotate(
-        comment_count=Count('comments'))
+        comment_count=Count('comments')).annotate(avg_rating=Round(Avg('comments__rating', default=0)))
 
     # queryset = Product.objects.all()[:50]
     serializer_class = ProductSerializers
