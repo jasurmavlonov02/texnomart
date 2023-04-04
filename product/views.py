@@ -1,11 +1,13 @@
 from django.db.models import Prefetch, Count, Avg
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ModelViewSet
 
-from product.models import Comment, Image, User
+from product.models import Comment, Image, User, Attribute, ProductAttribute, AttributeValue
 from product.pagination import StandardResultsSetPagination
 from product.round import Round
-from product.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer
+from product.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer, \
+    AttributeSerializer, AttributeValueSerializer, ProductAttributeSerializer
 
 
 # Create your views here.
@@ -20,7 +22,6 @@ class ProductListApiView(ListAPIView):
     # queryset = Product.objects.all()[:50]
     serializer_class = ProductSerializers
     pagination_class = StandardResultsSetPagination
-
     # def get_queryset(self):
     #     return Product.objects.all().prefetch_related('liked')[:12]
 
@@ -81,3 +82,13 @@ class ImageModelViewSet(ModelViewSet):
 
     def get_queryset(self):
         return Image.objects.all().select_related('product_id')
+
+
+class ProductAttributeViewSet(ListAPIView):
+    queryset = ProductAttribute.objects.all()
+    serializer_class = ProductAttributeSerializer
+
+
+class AttributeViewSet(ListAPIView):
+    queryset = Attribute.objects.all()
+    serializer_class = AttributeSerializer

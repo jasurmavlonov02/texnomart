@@ -1,8 +1,8 @@
-from rest_framework.fields import CharField
+import json
 from rest_framework.fields import CharField
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, IntegerField
 
-from product.models import Product, Comment, Image, User
+from product.models import Product, Comment, Image, User, Brand, Attribute, AttributeValue, ProductAttribute
 
 
 class DynamicModelSerializer(ModelSerializer):
@@ -106,11 +106,57 @@ class ProductSerializers(DynamicModelSerializer):
     #     rating_count = Comment.objects.filter(product=obj)
     #     return rating_count
 
+
 # return latest_image_serializer.data.get('image')
 # return 'http://127.0.0.1:8000'+latest_image_serializer.data.get('image')
 
 
-# class WishSerializer(ModelSerializer):
-#     class Meta:
-#         model = WishModel
-#         exclude = ()
+class BrandSerializer(ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = ('title',)
+
+
+class ProductInventorySerializer(ModelSerializer):
+    brand = BrandSerializer(many=False, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = (
+            'id',
+            'name',
+            'price',
+            'description',
+            'brand'
+        )
+
+
+class ProductAttributeSerializer(ModelSerializer):
+    product = ProductSerializers(many=False, read_only=True)
+
+    class Meta:
+        model = ProductAttribute
+        fields = ('attribute_value', "attribute", "product")
+
+
+class AttributeValueSerializer(ModelSerializer):
+    class Meta:
+        model = AttributeValue
+        fields = ('id', 'value')
+
+
+class AttributeSerializer(ModelSerializer):
+    values = SerializerMethodField()
+
+    def get_values(self, obj):
+        values = obj.productattribute_set.select_related('attribute_value').values_list('attribute_value__id',
+                                                                                        'attribute_value__value')
+
+        # serialized_values = ProductAttributeSerializer(values, many=True)
+        attr_data = [{'attr_value_id': id, 'attr_value': value, 'attribute_title': obj.title} for id, value, in
+                     values]
+        return attr_data
+
+    class Meta:
+        model = Attribute
+        fields = ('id', 'title', 'values')

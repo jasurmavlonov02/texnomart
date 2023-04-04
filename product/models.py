@@ -12,7 +12,7 @@ class Product(models.Model):
     name = models.CharField(max_length=150)
     price = models.FloatField()
     description = models.CharField(max_length=255)
-    brand = models.ForeignKey('Brand', on_delete=CASCADE)
+    brand = models.ForeignKey('Brand', on_delete=CASCADE, related_name='brands')
     liked = models.ManyToManyField('User', related_name='liked')
 
     def __str__(self):
@@ -64,3 +64,25 @@ class Brand(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Attribute(models.Model):
+    title = models.CharField(max_length=30)
+
+    def __str__(self):
+        return self.title
+
+
+class AttributeValue(models.Model):
+    value = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.value
+
+
+class ProductAttribute(models.Model):
+    product = models.ForeignKey('Product', CASCADE, null=True)
+    attribute = models.ForeignKey('Attribute', CASCADE, null=True)
+    attribute_value = models.ForeignKey('AttributeValue', CASCADE, null=True)
+
+
