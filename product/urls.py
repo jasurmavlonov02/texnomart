@@ -26,9 +26,10 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # cache_page(60)
-    path('product-list/', cache_page(60)(ProductListApiView.as_view()), name='product_list'),
+    path('product-list/',cache_page(60)(ProductListApiView.as_view()), name='product_list'),
     path('profile-list/', UserListApiView.as_view(), name='profile_list'),
-    path('products/', ProductAttributeViewSet.as_view(), name='filter_list'),
+    path('attr/', AttributeViewSet.as_view(), ),
+    path('products/', cache_page(60)(ProductAttributeViewSet.as_view())),
 
 
 

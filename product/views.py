@@ -1,31 +1,41 @@
-from django.db.models import Prefetch, Count, Avg
-from rest_framework.filters import SearchFilter
+from django.db.models import Prefetch, Count, Avg, IntegerField
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ModelViewSet
-
-from product.models import Comment, Image, User, Attribute, ProductAttribute, AttributeValue
+from django.db.models import OuterRef, Subquery
+from product.filter import ProductAttributeFilter
+from product.models import Comment, Image, User, Attribute, ProductAttribute
 from product.pagination import StandardResultsSetPagination
 from product.round import Round
 from product.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer, \
-    AttributeSerializer, AttributeValueSerializer, ProductAttributeSerializer
+    AttributeSerializer, ProductAttributeSerializer
+from django.db.models import Count, Avg, Sum
+from django.db.models.functions import Coalesce
 
 
 # Create your views here.
 
 
 class ProductListApiView(ListAPIView):
-    queryset = Product.objects.all().prefetch_related('liked') \
-        .prefetch_related(
-        Prefetch('images', queryset=Image.objects.all().select_related('product'))).annotate(
-        comment_count=Count('comments')).annotate(avg_rating=Round(Avg('comments__rating', default=0)))
+    # queryset = Product.objects.all().prefetch_related('liked') \
+    #     .prefetch_related(
+    #     Prefetch('images', queryset=Image.objects.all().select_related('product'))).annotate(
+    #     comment_count=Coalesce(Count('comments'), 0, output_field=IntegerField())).annotate(
+    #     avg_rating=Coalesce(Round(Avg('comments__rating', default=0)), 0, output_field=IntegerField()))
 
-    # queryset = Product.objects.all()[:50]
     serializer_class = ProductSerializers
     pagination_class = StandardResultsSetPagination
-    # def get_queryset(self):
-    #     return Product.objects.all().prefetch_related('liked')[:12]
 
-    # permission_classes = [IsAuthenticated, ]
+    def get_queryset(self):
+        queryset = Product.objects.all()
+        queryset = queryset.prefetch_related('liked')
+        queryset = queryset.prefetch_related(
+            Prefetch('images', queryset=Image.objects.all().select_related('product')))
+        # queryset = queryset.annotate(
+        #     comment_count=Coalesce(Count('comments'), 0, output_field=IntegerField()))
+        # queryset = queryset.annotate(
+        #     avg_rating=Coalesce(Round(Avg('comments__rating', default=0)), 0, output_field=IntegerField()))
+
+        return queryset
 
 
 class UserListApiView(ListAPIView):
@@ -85,8 +95,12 @@ class ImageModelViewSet(ModelViewSet):
 
 
 class ProductAttributeViewSet(ListAPIView):
-    queryset = ProductAttribute.objects.all()
+    queryset = ProductAttribute.objects.all().select_related('product')
     serializer_class = ProductAttributeSerializer
+    filterset_class = ProductAttributeFilter
+    search_fields = ("attribute_value__value",)
+
+
 
 
 class AttributeViewSet(ListAPIView):

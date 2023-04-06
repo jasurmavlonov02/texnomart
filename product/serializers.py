@@ -1,27 +1,7 @@
-import json
-from rest_framework.fields import CharField
+from rest_framework.fields import CharField, ReadOnlyField
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, IntegerField
 
 from product.models import Product, Comment, Image, User, Brand, Attribute, AttributeValue, ProductAttribute
-
-
-class DynamicModelSerializer(ModelSerializer):
-    def get_field_names(self, declared_fields, info):
-        field_names = super(DynamicModelSerializer, self).get_field_names(declared_fields, info)
-        if self.dynamic_fields is not None:
-            # Drop any fields that are not specified in the `fields` argument.
-            allowed = set(self.dynamic_fields)
-            excluded_field_names = set(field_names) - allowed
-            field_names = tuple(x for x in field_names if x not in excluded_field_names)
-        return field_names
-
-    def __init__(self, *args, **kwargs):
-        # Don't pass the `fields` or `read_only_fields` arg up to the superclass
-        self.dynamic_fields = kwargs.pop('fields', None)
-        self.read_only_fields = kwargs.pop('read_only_fields', [])
-
-        # Instantiate the superclass normally
-        super(DynamicModelSerializer, self).__init__(*args, **kwargs)
 
 
 class UserSerializers(ModelSerializer):
@@ -49,10 +29,7 @@ class ImageSerializer(ModelSerializer):
     #     return request.build_absolute_uri(photo_url)
 
 
-class ProductSerializers(DynamicModelSerializer):
-    comment_count = IntegerField()
-    avg_rating = IntegerField()
-
+class ProductSerializers(ModelSerializer):
     # images = ImageSerializer(many=True, read_only=True)
     # #
     # uploaded_images = ListField(
@@ -64,7 +41,8 @@ class ProductSerializers(DynamicModelSerializer):
         model = Product
         fields = (
             'id', 'name', 'price', 'description', 'brand', 'is_liked', 'latest_image', 'comment_count',
-            'avg_rating')
+            'avg_rating'
+        )
 
     # def create(self, validated_data):
     #     uploaded_images = validated_data.pop("uploaded_images")
@@ -77,6 +55,8 @@ class ProductSerializers(DynamicModelSerializer):
 
     latest_image = SerializerMethodField()
     is_liked = SerializerMethodField()
+    comment_count = SerializerMethodField()
+    avg_rating = SerializerMethodField()
 
     #
     def get_latest_image(self, obj):
@@ -102,9 +82,17 @@ class ProductSerializers(DynamicModelSerializer):
             return True
         return False
 
-    # def get_rating_count(self, obj):
-    #     rating_count = Comment.objects.filter(product=obj)
-    #     return rating_count
+    def get_comment_count(self, obj):
+        counts = Comment.objects.filter(product=obj).count()
+        return counts
+
+    def get_avg_rating(self, obj):
+        comments = obj.comments.all()
+        if comments:
+            total_rating = sum(comment.rating for comment in comments)
+            return round(total_rating / len(comments))
+        else:
+            return 0
 
 
 # return latest_image_serializer.data.get('image')
@@ -117,26 +105,12 @@ class BrandSerializer(ModelSerializer):
         fields = ('title',)
 
 
-class ProductInventorySerializer(ModelSerializer):
-    brand = BrandSerializer(many=False, read_only=True)
-
-    class Meta:
-        model = Product
-        fields = (
-            'id',
-            'name',
-            'price',
-            'description',
-            'brand'
-        )
-
-
 class ProductAttributeSerializer(ModelSerializer):
     product = ProductSerializers(many=False, read_only=True)
 
     class Meta:
         model = ProductAttribute
-        fields = ('attribute_value', "attribute", "product")
+        fields = ('attribute', 'attribute_value', 'product')
 
 
 class AttributeValueSerializer(ModelSerializer):
@@ -149,8 +123,11 @@ class AttributeSerializer(ModelSerializer):
     values = SerializerMethodField()
 
     def get_values(self, obj):
-        values = obj.productattribute_set.select_related('attribute_value').values_list('attribute_value__id',
-                                                                                        'attribute_value__value')
+        # values = obj.productattribute_set.select_related('attribute_value').values_list('attribute_value__id',
+        #                                                                                 'attribute_value__value')
+
+        values = ProductAttribute.objects.filter(attribute=obj).values_list('attribute_value__id',
+                                                                            'attribute_value__value')
 
         # serialized_values = ProductAttributeSerializer(values, many=True)
         attr_data = [{'attr_value_id': id, 'attr_value': value, 'attribute_title': obj.title} for id, value, in

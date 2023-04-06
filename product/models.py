@@ -3,6 +3,10 @@ from django.db import models
 from django.db.models import CASCADE
 
 from product.managers import UserManager
+from django.db.models import Count, Avg, Sum, IntegerField
+from django.db.models.functions import Coalesce
+
+from product.round import Round
 
 
 # Create your models here.
@@ -14,6 +18,8 @@ class Product(models.Model):
     description = models.CharField(max_length=255)
     brand = models.ForeignKey('Brand', on_delete=CASCADE, related_name='brands')
     liked = models.ManyToManyField('User', related_name='liked')
+
+
 
     def __str__(self):
         return self.name
@@ -43,7 +49,7 @@ class Comment(models.Model):
     message = models.CharField(max_length=255)
     file = models.FileField(upload_to='file/', null=True, blank=True)
     user = models.ForeignKey('User', models.CASCADE, null=True)
-    product = models.ForeignKey('Product', models.CASCADE, 'comments')
+    product = models.ForeignKey('Product', models.CASCADE, related_name='comments')
     rating = models.IntegerField(choices=RaitingChoices.choices, default=RaitingChoices.nol)
 
     def __str__(self):
@@ -84,5 +90,3 @@ class ProductAttribute(models.Model):
     product = models.ForeignKey('Product', CASCADE, null=True)
     attribute = models.ForeignKey('Attribute', CASCADE, null=True)
     attribute_value = models.ForeignKey('AttributeValue', CASCADE, null=True)
-
-
