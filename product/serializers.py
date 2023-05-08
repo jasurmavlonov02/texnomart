@@ -1,3 +1,5 @@
+from django.db.models import Count
+from django.db.models.functions import Coalesce
 from rest_framework.fields import CharField, ReadOnlyField
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, IntegerField
 
@@ -23,10 +25,13 @@ class ImageSerializer(ModelSerializer):
         model = Image
         fields = ('id', 'product', 'image')
 
-    # def get_photo_url(self, obj):
-    #     request = self.context.get('request')
-    #     photo_url = obj.fingerprint.url
-    #     return request.build_absolute_uri(photo_url)
+
+
+
+class BrandSerializer(ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = ('id', 'title',)
 
 
 class ProductSerializers(ModelSerializer):
@@ -37,11 +42,13 @@ class ProductSerializers(ModelSerializer):
     #     write_only=True
     # )
 
+    brand = BrandSerializer(many=False, read_only=False)
+
     class Meta:
         model = Product
         fields = (
             'id', 'name', 'price', 'description', 'brand', 'is_liked', 'latest_image', 'comment_count',
-            'avg_rating'
+            'avg_rating', 'main_characters'
         )
 
     # def create(self, validated_data):
@@ -57,6 +64,19 @@ class ProductSerializers(ModelSerializer):
     is_liked = SerializerMethodField()
     comment_count = SerializerMethodField()
     avg_rating = SerializerMethodField()
+    main_characters = SerializerMethodField()
+
+    def get_main_characters(self, obj):
+        characters = ProductAttribute.objects.filter(product=obj).values_list(
+            'attribute__title',
+            'attribute_value__value',
+        )
+        character_data = [
+            {'name': name, 'value': value, }
+            for
+            name, value, in
+            characters]
+        return character_data
 
     #
     def get_latest_image(self, obj):
@@ -99,12 +119,6 @@ class ProductSerializers(ModelSerializer):
 # return 'http://127.0.0.1:8000'+latest_image_serializer.data.get('image')
 
 
-class BrandSerializer(ModelSerializer):
-    class Meta:
-        model = Brand
-        fields = ('title',)
-
-
 class ProductAttributeSerializer(ModelSerializer):
     product = ProductSerializers(many=False, read_only=True)
 
@@ -125,15 +139,25 @@ class AttributeSerializer(ModelSerializer):
     def get_values(self, obj):
         # values = obj.productattribute_set.select_related('attribute_value').values_list('attribute_value__id',
         #                                                                                 'attribute_value__value')
-
-        values = ProductAttribute.objects.filter(attribute=obj).values_list('attribute_value__id',
-                                                                            'attribute_value__value')
+        values = ProductAttribute.objects.filter(attribute=obj).annotate(
+            count=Coalesce(Count('product'), 0)).values_list('attribute_value__id',
+                                                             'attribute_value__value', 'count',
+                                                             )
 
         # serialized_values = ProductAttributeSerializer(values, many=True)
-        attr_data = [{'attr_value_id': id, 'attr_value': value, 'attribute_title': obj.title} for id, value, in
-                     values]
+        attr_data = [
+            {'attr_value_id': id, 'attr_value': value, 'attribute_title': obj.title, 'count': count}
+            for
+            id, value, count in
+            values]
         return attr_data
 
     class Meta:
         model = Attribute
         fields = ('id', 'title', 'values')
+
+
+class ProductAttributeAdvancedFilterSerializer(ModelSerializer):
+    class Meta:
+        model = ProductAttribute
+        fields = ('attribute', 'attribute_value', 'product',)

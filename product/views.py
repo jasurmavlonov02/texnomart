@@ -1,15 +1,16 @@
-from django.db.models import Prefetch, Count, Avg, IntegerField
-from rest_framework.generics import ListAPIView
-from rest_framework.viewsets import ModelViewSet
-from django.db.models import OuterRef, Subquery
-from product.filter import ProductAttributeFilter
-from product.models import Comment, Image, User, Attribute, ProductAttribute
-from product.pagination import StandardResultsSetPagination
-from product.round import Round
-from product.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer, \
-    AttributeSerializer, ProductAttributeSerializer
-from django.db.models import Count, Avg, Sum
+from django.db.models import Prefetch, Count
+from django.db.models import Q
 from django.db.models.functions import Coalesce
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import ListAPIView, GenericAPIView
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+
+from product.filter import ProductAttributeFilter
+from product.models import Comment, Image, User, Attribute, ProductAttribute, AttributeValue, Brand
+from product.pagination import StandardResultsSetPagination
+from product.serializers import ProductSerializers, UserSerializers, CommentSerializers, Product, ImageSerializer, \
+    AttributeSerializer, ProductAttributeSerializer, ProductAttributeAdvancedFilterSerializer, BrandSerializer
 
 
 # Create your views here.
@@ -97,12 +98,41 @@ class ImageModelViewSet(ModelViewSet):
 class ProductAttributeViewSet(ListAPIView):
     queryset = ProductAttribute.objects.all().select_related('product')
     serializer_class = ProductAttributeSerializer
-    filterset_class = ProductAttributeFilter
-    search_fields = ("attribute_value__value",)
+    filter_backends = [ProductAttributeFilter]
 
+    # search_fields = ("attribute_value__value","attribute__id")
+    def list(self, request, *args, **kwargs):
+        my_filter = ProductAttributeFilter()
 
+        my_filter.parse_character_values(request)
+
+        queryset = self.filter_queryset(self.get_queryset())
+        filters = [Q(attribute=attr_id, attribute_value=val_id)
+                   for attr_id, values in my_filter.character_values_dict.items()
+                   for val_id in values]
+        # Combine the Q objects with OR clauses
+        print(filters)
+        if filters:
+            query = filters.pop()
+
+            for f in filters:
+                query |= f
+            queryset = queryset.filter(query)
+        # for attribute_id, attribute_values in my_filter.character_values_dict.items():
+        #     value_list = [attribute_value for attribute_value in attribute_values]
+        #
+        #     queryset = queryset.filter(
+        #         Q(attribute=attribute_id) &
+        #         Q(attribute_value__in=value_list)
+        #     )
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data)
 
 
 class AttributeViewSet(ListAPIView):
-    queryset = Attribute.objects.all()
+    queryset = Attribute.objects.all().annotate()
     serializer_class = AttributeSerializer
+
+
+

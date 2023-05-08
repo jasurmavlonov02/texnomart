@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
-
+from decouple import config
 from django.conf import settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,10 +21,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-v%wp(i&$$=6%=ie&nm0mmg&m&31h$*$(lrag6^5@6#i&5#@49l'
-
+# SECRET_KEY = 'django-insecure-v%wp(i&$$=6%=ie&nm0mmg&m&31h$*$(lrag6^5@6#i&5#@49l'
+SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['*']
 
@@ -37,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'product.apps.AppConfig',
+    'product',
+
     # installer
     'rest_framework',
     'drf_yasg',
@@ -45,6 +47,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'django_elasticsearch_dsl',
     'django_filters',
+    'book'
 
 ]
 
@@ -98,11 +101,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'my_db',
-        'USER': 'postgres',
-        'PASSWORD': '1',
-        'HOST': 'db',
-        'PORT': 5432,
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
     }
 }
 
@@ -161,6 +164,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication'
     ),
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     # 'PAGE_SIZE': 100
     #

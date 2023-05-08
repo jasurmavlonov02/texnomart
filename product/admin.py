@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from product.models import Comment, Product, User, Image, Brand, Attribute, AttributeValue, ProductAttribute
 
-# Register your models here.
+# Register your model here.
 
 admin.site.register(User)
 admin.site.register(Comment)

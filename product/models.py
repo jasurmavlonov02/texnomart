@@ -3,13 +3,9 @@ from django.db import models
 from django.db.models import CASCADE
 
 from product.managers import UserManager
-from django.db.models import Count, Avg, Sum, IntegerField
-from django.db.models.functions import Coalesce
-
-from product.round import Round
 
 
-# Create your models here.
+# Create your model here.
 
 
 class Product(models.Model):
@@ -18,8 +14,6 @@ class Product(models.Model):
     description = models.CharField(max_length=255)
     brand = models.ForeignKey('Brand', on_delete=CASCADE, related_name='brands')
     liked = models.ManyToManyField('User', related_name='liked')
-
-
 
     def __str__(self):
         return self.name
